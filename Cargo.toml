@@ -12,7 +12,6 @@ categories = ["embedded"]
 [dependencies]
 crc16 = "0.4.0"
 embedded-hal = { version = "1.0.0" }
-esp-hal = { version = "1.0.0", features = ["esp32s3", "unstable"] }
 
 
 [dev-dependencies]

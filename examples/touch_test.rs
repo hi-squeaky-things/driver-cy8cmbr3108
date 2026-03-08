@@ -1,11 +1,12 @@
 #![no_std]
 #![no_main]
 
-use crc16::{ARC, AUG_CCITT, CCITT_FALSE, State};
-use driver_cy8cmbR3108::{CY8CMBR3XXX_CTRL_CMD_CALC_CRC, CY8CMBR3XXX_CTRL_CMD_RESET, CY8CMBR3108, registers};
+use driver_cy8cmbR3108::{
+    registers, CY8CMBR3108, CY8CMBR3XXX_CTRL_CMD_CALC_CRC, CY8CMBR3XXX_CTRL_CMD_RESET,
+};
 use esp_backtrace as _;
-use esp_hal::delay::Delay;
 use esp_hal::{
+    delay::Delay,
     i2c::master::{Config, I2c},
     time::Rate,
     xtensa_lx_rt::entry,
@@ -26,7 +27,9 @@ fn main() -> ! {
         .with_sda(peripherals.GPIO47)
         .with_scl(peripherals.GPIO48);
 
-    let mut touch = CY8CMBR3108::new(i2c);
+    let delay = Delay::new();
+
+    let mut touch = CY8CMBR3108::new(i2c, delay);
 
     for i in 0..5 {
         let is_device_ready = touch.ready();
@@ -40,7 +43,6 @@ fn main() -> ! {
             }
             Err(e) => println!("CY8CMBR3108 Initialization failed with error: {:?}", e),
         }
-        Delay::new().delay_millis(100);
     }
     //device id = 2563
     println!(
@@ -53,26 +55,22 @@ fn main() -> ! {
         touch.get_device_revision().unwrap()
     );
 
-
     let is_config_ready = touch.write_configuration();
-     match is_config_ready {
-            Ok(true) => {
-                println!("CY8CMBR3108 Config successful!");
-            }
-            Ok(false) => {
-                println!("CY8CMBR3108 Config failed,")
-            }
-            Err(e) => println!("CY8CMBR3108 Config failed with error: {:?}", e),
+    match is_config_ready {
+        Ok(true) => {
+            println!("CY8CMBR3108 Config successful!");
         }
-    
-   
+        Ok(false) => {
+            println!("CY8CMBR3108 Config failed,")
+        }
+        Err(e) => println!("CY8CMBR3108 Config failed with error: {:?}", e),
+    }
+
     loop {
-        Delay::new().delay_millis(100);
-          println!(
+        delay.delay_millis(100);
+        println!(
             "CY8CMBR3108 Button Status    : {:08b}",
             touch.get_button_status().unwrap()
         );
     }
 }
-
-

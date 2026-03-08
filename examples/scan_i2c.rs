@@ -1,37 +1,48 @@
-#![no_std]
-#![no_main]
+// This code scans the I2C bus to detect connected devices.
+// It initializes I2C on GPIO47 (SDA) and GPIO48 (SCL), then checks all 7-bit addresses (0-127).
+// When a device responds, its address is printed. The scan is performed twice with a 50ms delay between scans.
 
-use esp_backtrace as _;
-use esp_hal::delay::Delay;
+#![no_std]  
+#![no_main]  
+
+use esp_backtrace as _;  
+use esp_hal::delay::Delay;  
 use esp_hal::{
-    i2c::master::{Config, I2c},
-    xtensa_lx_rt::entry,
+    i2c::master::{Config, I2c},  
+    xtensa_lx_rt::entry,  
 };
-use esp_println::println;
-esp_bootloader_esp_idf::esp_app_desc!();
+use esp_println::println;  
+esp_bootloader_esp_idf::esp_app_desc!();  
 
-#[entry]
-fn main() -> ! {
-    // init CPU
-    let mut config = esp_hal::Config::default().with_cpu_clock(esp_hal::clock::CpuClock::_240MHz);
-    let mut peripherals = esp_hal::init(config);
+#[entry]  // Marks this as the entry point function
+fn main() -> ! {  // Main function that never returns (!)
+    // Initialize CPU with 240MHz clock
+    let config_cpu = esp_hal::Config::default().with_cpu_clock(esp_hal::clock::CpuClock::_240MHz);
+    let mut peripherals = esp_hal::init(config_cpu);
 
-    let mut config = Config::default();
-    let mut i2c = I2c::new(peripherals.I2C0.reborrow(), config)
+    // Configure I2C with default settings
+    let config_i2c = Config::default();
+    // Initialize I2C peripheral on I2C0 with SDA on GPIO47 and SCL on GPIO48
+    let mut i2c = I2c::new(peripherals.I2C0.reborrow(), config_i2c)
         .unwrap()
         .with_sda(peripherals.GPIO47)
         .with_scl(peripherals.GPIO48);
 
+    // Buffer for reading data (1 byte)
     let mut buf: [u8; 1] = [0];
+    // Scan I2C bus twice with 50ms delay between scans
     for j in 0..2 {
         Delay::new().delay_millis(50);
+        // Check all possible 7-bit I2C addresses (0-127)
         for i in 0..127 {
+            // Attempt to read from current address
             let result = i2c.read(i, &mut buf);
             match result {
-                Ok(_) => println!("address = {:02X}", i),
-                Err(_) => {}
+                Ok(_) => println!("Found an I2C device @ {:02X}", i),  // Print address if device responds
+                Err(_) => {}  // Ignore errors (no device at this address)
             }
         }
     }
+    // Infinite loop to keep the program running
     loop {}
 }

@@ -1,14 +1,13 @@
 #![no_std]
 
-use crc16::{CCITT_FALSE, State};
+use crc16::{State, CCITT_FALSE};
 use embedded_hal::{delay::DelayNs, i2c::I2c};
-use esp_hal::delay::Delay;
 use registers::*;
 
-#[derive(Debug, Copy, Clone)]
-pub struct CY8CMBR3108<I2C> {
+pub struct CY8CMBR3108<I2C, D> {
     i2c: I2C,
     address: u8,
+    delay:  D,
 }
 
 pub const CY8CMBR3108_I2C_ADDR: u8 = 0x37;
@@ -159,13 +158,15 @@ pub const DEFAULT_CONFIG: [u8; 128] = [
     177,
 ];
 
-impl<I2C: I2c> CY8CMBR3108<I2C> {
+impl<I2C: I2c, D: DelayNs> CY8CMBR3108<I2C,D> {
     /// Create new builder with a default I2C address of 0x0F
     #[allow(clippy::new_ret_no_self)]
-    pub fn new(i2c: I2C) -> Self {
+    pub fn new(i2c: I2C, delay: D) -> Self
+    {
         CY8CMBR3108 {
             i2c,
             address: CY8CMBR3108_I2C_ADDR,
+            delay,
         }
     }
 
@@ -194,7 +195,7 @@ impl<I2C: I2c> CY8CMBR3108<I2C> {
         let new_crc = state.get();
 
         let mut config = DEFAULT_CONFIG;
-       
+
         config[0x7e] = (new_crc & 0xFF) as u8; // CRC low byte
         config[0x7f] = (new_crc >> 8) as u8; // CRC high byte
 
@@ -203,27 +204,30 @@ impl<I2C: I2c> CY8CMBR3108<I2C> {
             registers::CY8CMBR3XXX_CTRL_CMD,
             CY8CMBR3XXX_CTRL_CMD_CALC_CRC,
         )?;
-       Delay::new().delay_millis(500);
-     
-       
+        
+        self.delay.delay_ms(500);
+
         self.update_configuration(registers::CY8CMBR3XXX_CTRL_CMD, CY8CMBR3XXX_CTRL_CMD_RESET)
             .unwrap();
 
-       Delay::new().delay_millis(100);
+        self.delay.delay_ms(100);
 
-       for i in 0..5 {
-        let is_device_ready = self.ready();
-        match is_device_ready {
-            Ok(true) => {
-                break;
-            }
-            Ok(false) => {
-            }
-            Err(e) => {},
-        }
-    }
+        self.wake_up();
 
         Ok(true)
+    }
+
+    pub fn wake_up(&mut self) -> Result<bool, I2C::Error> {
+        //wake up the chip
+        for i in 0..5 {
+            let is_device_ready = self.ready();
+            match is_device_ready {
+                Ok(true) => return Ok(true),
+                Ok(false) => {}
+                Err(e) => {}
+            }
+        }
+        Ok(false)
     }
 
     pub fn get_family_id(&mut self) -> Result<u8, I2C::Error> {
