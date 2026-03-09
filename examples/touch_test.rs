@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use driver_cy8cmbR3108::CY8CMBR3108;
+use driver_cy8cmbr3108::CY8CMBR3108;
 use esp_backtrace as _;
 use esp_hal::{
     delay::Delay,
@@ -55,6 +55,11 @@ fn main() -> ! {
         println!(
             "CY8CMBR3108 Button Status    : {:08b}",
             touch.get_button_status().unwrap()
+        );
+
+        println!(
+            "CY8CMBR3108 Proximity Status : {:08b}",
+            touch.get_prox_status().unwrap() & 0b0000_0011
         );
     }
 }

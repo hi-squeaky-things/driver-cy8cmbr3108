@@ -22,144 +22,33 @@ pub mod registers {
     pub const CY8CMBR3XXX_DEVICE_ID: u8 = 0x90;
     pub const CY8CMBR3XXX_DEVICE_REV: u8 = 0x92;
     pub const CY8CMBR3XXX_BUTTON_STAT: u8 = 0xAA;
+    pub const CY8CMBR3XXX_PROX_STAT: u8 = 0xAE;
     pub const CY8CMBR3XXX_CTRL_CMD: u8 = 0x86;
     pub const CY8CMBR3XXX_CTRL_CMD_STATUS: u8 = 0x88;
     pub const CY8CMBR3XXX_CTRL_CMD_ERR: u8 = 0x89;
 }
 
 pub const DEFAULT_CONFIG: [u8; 128] = [
-    0b1100_1100,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    128,
-    128,
-    128,
-    128,
-    128,
-    128,
-    128,
-    128,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    3,
-    12,
-    0,
-    50,
-    51,
-    51,
-    0,
-    0,
-    0,
-    0,
-    0,
-    128,
-    5,
-    0,
-    0,
-    2,
-    0,
-    2,
-    0,
-    0,
-    5,
-    0,
-    50,
-    20,
-    20,
-    30,
-    30,
-    0,
-    0,
-    30,
-    30,
-    0,
-    0,
-    0,
-    1,
-    1,
-    0,
-    15,
-    15,
-    15,
-    15,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    84,
-    3,
-    1,
-    8,
-    0,
-    55,
-    6,
-    0,
-    0,
-    10,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    44,
-    177,
+    0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x80,
+    0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x80,
+    0x05, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x1E, 0x1E, 0x00,
+    0x00, 0x1E, 0x1E, 0x00, 0x00, 0x00, 0x01, 0x01,
+    0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x10, 0x03, 0x01, 0x58,
+    0x00, 0x37, 0x06, 0x00, 0x00, 0x0A, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xBC, 0xD8
 ];
 
 impl<I2C: I2c, D: DelayNs> CY8CMBR3108<I2C,D> {
-    /// Create new builder with a default I2C address of 0x0F
+    /// Create new bilder with a default I2C address of 0x0F
     #[allow(clippy::new_ret_no_self)]
     pub fn new(i2c: I2C, delay: D) -> Self
     {
@@ -175,7 +64,7 @@ impl<I2C: I2c, D: DelayNs> CY8CMBR3108<I2C,D> {
     }
 
     pub fn ready(&mut self) -> Result<bool, I2C::Error> {
-        for i in 0..3 {
+        for _i in 0..2 {
             let output = self.get_family_id();
             match output {
                 Ok(family_id) => {
@@ -212,20 +101,21 @@ impl<I2C: I2c, D: DelayNs> CY8CMBR3108<I2C,D> {
 
         self.delay.delay_ms(100);
 
-        self.wake_up();
+        let _ = self.wake_up();
 
         Ok(true)
     }
 
     pub fn wake_up(&mut self) -> Result<bool, I2C::Error> {
         //wake up the chip
-        for i in 0..5 {
+        for _i in 0..5 {
             let is_device_ready = self.ready();
             match is_device_ready {
                 Ok(true) => return Ok(true),
                 Ok(false) => {}
-                Err(e) => {}
+                Err(_e) => {}
             }
+            self.delay.delay_ms(10);
         }
         Ok(false)
     }
@@ -245,6 +135,10 @@ impl<I2C: I2c, D: DelayNs> CY8CMBR3108<I2C,D> {
 
     pub fn get_button_status(&mut self) -> Result<u16, I2C::Error> {
         self.read_configuration_2_bytes(CY8CMBR3XXX_BUTTON_STAT)
+    }
+
+    pub fn get_prox_status(&mut self) -> Result<u16, I2C::Error> {
+        self.read_configuration_2_bytes(CY8CMBR3XXX_PROX_STAT)
     }
 
     pub fn read_all(&mut self) -> Result<[u8; CY8CMBR3108_CONFIG_SIZE], I2C::Error> {
