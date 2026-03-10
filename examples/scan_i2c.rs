@@ -5,20 +5,35 @@
 #![no_std]  
 #![no_main]  
 
-use esp_backtrace as _;  
-use esp_hal::delay::Delay;  
+//
+use embassy_executor::Spawner;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, pubsub::PubSubChannel, watch::Watch};
+use embassy_time::{Duration, Timer};
+use esp_alloc::heap_allocator;
+use esp_backtrace as _;
 use esp_hal::{
-    i2c::master::{Config, I2c},  
-    xtensa_lx_rt::entry,  
+    clock::CpuClock, ram,
+    system::{Cpu, CpuControl, Stack},
 };
-use esp_println::println;  
+use esp_println::println;
+use esp_hal::i2c::master::{Config, I2c};
+use esp_hal::timer::timg::TimerGroup;
+
+//
+
 esp_bootloader_esp_idf::esp_app_desc!();  
 
-#[entry]  // Marks this as the entry point function
-fn main() -> ! {  // Main function that never returns (!)
+
+#[esp_rtos::main]
+async fn main(spawner: Spawner) {
+    esp_println::logger::init_logger_from_env();
     // Initialize CPU with 240MHz clock
     let config_cpu = esp_hal::Config::default().with_cpu_clock(esp_hal::clock::CpuClock::_240MHz);
     let mut peripherals = esp_hal::init(config_cpu);
+ let timg0 = TimerGroup::new(peripherals.TIMG0);
+
+    esp_rtos::start(timg0.timer0);
+
 
     // Configure I2C with default settings
     let config_i2c = Config::default();
@@ -32,7 +47,8 @@ fn main() -> ! {  // Main function that never returns (!)
     let mut buf: [u8; 1] = [0];
     // Scan I2C bus twice with 50ms delay between scans
     for j in 0..2 {
-        Delay::new().delay_millis(50);
+         Timer::after(Duration::from_millis(50)).await;
+
         // Check all possible 7-bit I2C addresses (0-127)
         for i in 0..127 {
             // Attempt to read from current address
