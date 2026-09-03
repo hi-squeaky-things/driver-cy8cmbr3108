@@ -16,21 +16,19 @@ use embedded_hal_async::delay;
 use esp_alloc::heap_allocator;
 use esp_backtrace as _;
 
-use esp_hal::Async;
 use esp_hal::delay::Delay;
+use esp_hal::i2c::master::I2c;
 use esp_hal::peripherals::Peripherals;
 use esp_hal::timer::timg::TimerGroup;
-use esp_hal::i2c::master::I2c;
+use esp_hal::Async;
 
 use esp_println::println;
 use static_cell::StaticCell;
-
 
 //
 
 esp_bootloader_esp_idf::esp_app_desc!();
 type I2c1Bus = Mutex<NoopRawMutex, esp_hal::i2c::master::I2c<'static, Async>>;
-
 
 //type I2cDeviceType = i2c_bus::RefCellDevice<'static, esp_hal::i2c::master::I2c<'static, Async>>;
 
@@ -53,27 +51,23 @@ async fn main(spawner: Spawner) {
     static I2C_BUS: StaticCell<I2c1Bus> = StaticCell::new();
     let i2c_bus = I2C_BUS.init(Mutex::new(i2c));
 
-    
+    //  let delay = esp_hal::delay::Delay::new();
 
-  //  let delay = esp_hal::delay::Delay::new();
-
-
-        let _ = spawner.spawn(test(i2c_bus));
-        loop {
-                 Timer::after(Duration::from_millis(10)).await;
-  
-        }
+    let _ = spawner.spawn(test(i2c_bus));
+    loop {
+        Timer::after(Duration::from_millis(10)).await;
+    }
 }
 
 #[embassy_executor::task]
 pub async fn test(i2c_bus: &'static I2c1Bus) {
-  // function body
+    // function body
 
     let i2c_dev = I2cDevice::new(i2c_bus);
-  
+
     let delay = Delay::new();
-    
-    let mut touch = CY8CMBR3108::new( i2c_dev, delay);
+
+    let mut touch = CY8CMBR3108::new(i2c_dev, delay);
     let _ = touch.wake_up().await;
 
     //device id = 2563
@@ -111,4 +105,3 @@ pub async fn test(i2c_bus: &'static I2c1Bus) {
         );
     }
 }
-
